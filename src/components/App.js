@@ -1,9 +1,7 @@
 import React from "react";
-import Modal from "react-modal";
-import Collapsible from "react-collapsible";
+import CreateModal from "./CreateModal";
 import "bootstrap/dist/css/bootstrap.min.css";
-import RecipeAdd from "./RecipeAdd";
-import ReciptAlert from "./ReciptAlert.js";
+import CreateCollapsible from "./CreateCollapsible";
 import "../App.css";
 
 class App extends React.Component{
@@ -13,74 +11,77 @@ class App extends React.Component{
     this.popupCreate=this.popupCreate.bind(this);
     this.createRecipe=this.createRecipe.bind(this);
     this.requestCloseFn=this.requestCloseFn.bind(this);
+    this.editPopup=this.editPopup.bind(this);
+    this.editPopupCreate=this.editPopupCreate.bind(this);
+    this.removeRecipe=this.removeRecipe.bind(this);
     this.state={
       popup:false,
+      editPopup:false,
+      recipeKey:{value:""},
       ingredients:{},
       names:{}
     };
   }
+  
 
-  createRecipe(inputs,name){
+  createRecipe(inputs,name,key){
     const ingredients={...this.state.ingredients};
-    const key=`recipe-${Date.now()}`;
     ingredients[key]=inputs;
     const names={...this.state.names};
     names[key]=name;
     this.setState({ingredients,names});
   }
 
+  removeRecipe(key){
+    const names={...this.state.names};
+    delete names[key]
+    const ingredients={...this.state.ingredients};
+    delete ingredients[key]
+    this.setState({names,ingredients});
+  }
+
   requestCloseFn(){
-    this.setState({popup:false});
+    this.setState({popup:false,editPopup:false});
+  }
+
+  componentWillMount(){
+    const localStorageRef=localStorage.getItem("recipes-box-state");
+    if(localStorageRef){
+      this.setState({
+        ingredients:JSON.parse(localStorageRef).ingredients,
+        names:JSON.parse(localStorageRef).names
+      });
+    }
+  }
+
+  componentWillUpdate(nextProps,nextState){
+    localStorage.setItem("recipes-box-state",JSON.stringify(nextState));
   }
 
   popup(){
     if(this.state.popup===false){
       return;
     }
-    const customStyle={
-      overlay : {
-        position          : 'fixed',
-        top               : 0,
-        left              : 0,
-        right             : 0,
-        bottom            : 0,
-        backgroundColor   : 'rgba(128, 128, 128, 0.5)'
-      },
-      content : {
-        position                   : 'absolute',
-        top                        : '0',
-        left                       : '0',
-        right                      : '0',
-        bottom                     : '0',
-        border                     : '1px solid #ccc',
-        background                 : '#fff',
-        overflow                   : 'auto',
-        WebkitOverflowScrolling    : 'touch',
-        borderRadius               : '4px',
-        outline                    : 'none',
-        padding                    : '0px',
-        display                    : 'inline-block',
-        margin                     : 'auto',
-        height                     : '455px',
-        width                      : '595px'
-      }
-    }
-    return (
-      <Modal
-        isOpen={true}
-        //onAfterOpen={afterOpenFn}
-        onRequestClose={this.requestCloseFn}
-        //closeTimeoutMS={n}
-        shouldCloseOnOverlayClick={true}
-        style={customStyle}
-        contentLabel="Modal" >
-            <RecipeAdd createRecipe={this.createRecipe} onRequestClose={this.requestCloseFn} />
-      </Modal>
+    return(
+      <CreateModal state={this.state} popup="add" createRecipe={this.createRecipe} requestCloseFn={this.requestCloseFn} />
     );
   }
 
   popupCreate(){
     this.setState({popup:true});
+  }
+
+  editPopupCreate(){
+    this.setState({editPopup:true});
+  }
+
+  editPopup(){
+    if(this.state.editPopup===false){
+      return;
+    }
+    return(
+      <CreateModal state={this.state} createRecipe={this.createRecipe} requestCloseFn={this.requestCloseFn} />
+    );
   }
 
   render(){
@@ -89,10 +90,11 @@ class App extends React.Component{
         <div className="row">
           <br />
           <div className="well well-lg">
-            {Object.keys(this.state.names).map(key=><ReciptAlert key={key} index={key} state={this.state} />)}
+            {Object.keys(this.state.names).map((key)=><CreateCollapsible removeRecipe={this.removeRecipe} editPopupCreate={this.editPopupCreate} key={key} index={key} recipeKey={this.state.recipeKey} names={this.state.names} ingredients={this.state.ingredients} /> )}
           </div>
           <button className="btn btn-primary btn-lg" type="button" onClick={this.popupCreate}>Add Recipe</button>
           {this.popup()}
+          {this.editPopup()}
         </div>
       </div>
     );
